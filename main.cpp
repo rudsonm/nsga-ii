@@ -1,5 +1,7 @@
-#include <vector>
 #include <cstdlib>
+#include <vector>
+#include <algorithm>
+#include <limits>
 
 struct Solution {
     std::vector<int> requirementTeam;
@@ -57,6 +59,14 @@ float getSatisfactionValue(Instance instance, Solution solution) {
     return satisfactionValue;
 }
 
+bool maxCompare(std::pair<int, float> a, std::pair<int, float> b) {
+    return a.second < b.second;
+}
+
+bool minCompare(std::pair<int, float> a, std::pair<int, float> b) {
+    return b.second < a.second;
+}
+
 int main() {
     const int POPULATION_SIZE = 10, NUM_REQUIREMENTS = 6, NUM_TEAMS = 2;
 
@@ -68,13 +78,29 @@ int main() {
         solutions.push_back(generateRandomSolution(NUM_REQUIREMENTS, NUM_TEAMS));
 
     // EVALUATE OBJECTIVE VALUES
-    std::vector<float> costValues(solutions.size(), 0.);
-    std::vector<float> satisfactionValues(solutions.size(), 0.);
-    for (int i = 0; i < solutions.size(); i++) {
+    std::vector<std::pair<int, float>> costValues;
+    std::vector<std::pair<int, float>> satisfactionValues;
+    for (int i = 0; i < solutions.size(); i++) {    
         Solution solution = solutions.at(i);
-        costValues.at(i) = getCostValue(instance, solution);
-        satisfactionValues.at(i) = getSatisfactionValue(instance, solution);
+        costValues.push_back(std::make_pair(i, getCostValue(instance, solution)));
+        satisfactionValues.push_back(std::make_pair(i, getSatisfactionValue(instance, solution)));
     }
 
+    // CROWDING DISTANCE ASSIGNMENT
+    std::sort(costValues.begin(), costValues.end(), minCompare);
+    std::pair<float,float>costValuesMinMax(costValues.front().second, costValues.back().second);
+    
+    std::sort(satisfactionValues.begin(), satisfactionValues.end(), maxCompare);
+    std::pair<float, float>satisfactionValuesMinMax(satisfactionValues.front().second, satisfactionValues.back().second);
+
+    std::vector<float> solutionsDistance(solutions.size(), 0.);
+    solutionsDistance.front() = solutionsDistance.back() = std::numeric_limits<float>::max();    
+    for (int i = 1; i < solutions.size() - 1; i++) {
+        int solutionIndex = costValues.at(i).first;
+        solutionsDistance.at(solutionIndex) += (costValues.at(i + 1).second - costValues.at(i - 1).second) / (costValuesMinMax.first - costValuesMinMax.second);
+
+        solutionIndex = satisfactionValues.at(i).first;
+        solutionsDistance.at(solutionIndex) += (satisfactionValues.at(i + 1).second - satisfactionValues.at(i - 1).second) / (satisfactionValuesMinMax.first - satisfactionValuesMinMax.second);
+    }
     return 0;
 }
