@@ -6,6 +6,8 @@
 struct Solution {
     std::vector<int> requirementTeam;
     std::vector<int> requirementSequence;
+    float distance = 0.;
+    int rank;    
 
     Solution(int numRequirements, int numTeams) {
         requirementTeam = std::vector<int>(numRequirements, 0);
@@ -93,14 +95,13 @@ int main() {
     std::sort(satisfactionValues.begin(), satisfactionValues.end(), maxCompare);
     std::pair<float, float>satisfactionValuesMinMax(satisfactionValues.front().second, satisfactionValues.back().second);
 
-    std::vector<float> solutionsDistance(solutions.size(), 0.);
-    solutionsDistance.front() = solutionsDistance.back() = std::numeric_limits<float>::max();    
+    std::vector<float> solutionsDistance(solutions.size(), 0.);    
     for (int i = 1; i < solutions.size() - 1; i++) {
         int solutionIndex = costValues.at(i).first;
-        solutionsDistance.at(solutionIndex) += (costValues.at(i + 1).second - costValues.at(i - 1).second) / (costValuesMinMax.first - costValuesMinMax.second);
+        solutions.at(solutionIndex).distance += std::abs(costValues.at(i + 1).second - costValues.at(i - 1).second) / (costValuesMinMax.first - costValuesMinMax.second);
 
         solutionIndex = satisfactionValues.at(i).first;
-        solutionsDistance.at(solutionIndex) += (satisfactionValues.at(i + 1).second - satisfactionValues.at(i - 1).second) / (satisfactionValuesMinMax.first - satisfactionValuesMinMax.second);
+        solutions.at(solutionIndex).distance += std::abs(satisfactionValues.at(i + 1).second - satisfactionValues.at(i - 1).second) / (satisfactionValuesMinMax.first - satisfactionValuesMinMax.second);
     }
     return 0;
 }
