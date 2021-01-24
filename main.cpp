@@ -4,23 +4,54 @@
 #include <limits>
 
 struct Solution {
+    int id = 0;
     std::vector<int> requirementTeam;
     std::vector<int> requirementSequence;
+    std::vector<*Solution> dominates;
     float distance = 0.;
     int rank;    
 
-    Solution(int numRequirements, int numTeams) {
+    Solution(int id, int numRequirements, int numTeams) {
+        this.id = id;
         requirementTeam = std::vector<int>(numRequirements, 0);
         requirementSequence = std::vector<int>(numTeams, 0);
     }
+
 };
 
 struct Instance {
     std::vector<float> customerWeight;
     std::vector<std::vector<float>> requirementImportance;
     std::vector<std::vector<float>> requirementCost;
-    std::vector<float> teamHourCost;
+    std::vector<float> teamHourCapacity;
+    std::vector<float> teamHourCost;    
 };
+
+
+Instance generateRandomInstance(const int numCustomer, const int numRequirement, const int numTeam) {
+    Instance intance;
+    for (int i = 0; i < numCustomer; i++) {
+        customerWeight.push_back(rand() % 3 + 1);
+    }
+
+    for (int i = 0; i < instance.teamHourCost; i++) {
+        teamHourCapacity.push_back(rand() % 20 + 20);
+        teamHourCost.push_back(rand() % 15 + 20);
+    }
+
+    for (int i = 0; i < numRequirement; i++) {
+        instance.requirementImportance.push_back(std::vector<float>(numCustomer, 0.));
+        instance.requirementCost.push_back(std::vector<float>(numTeam, 0.));
+        for (int j = 0; j < numCustomer; j++) {
+            instance.requirementImportance.at(i).at(j) = rand() % 10 + 1;
+        }
+        for (int j = 0; j < numTeam; j++) {
+            instance.requirementCost.at(i).at(j) = (1 - instance.teamHourCost.at(j) / 35) * (rand() % 20 + 1);
+        }
+    }
+
+    return instance;
+}
 
 Solution generateRandomSolution(const int numRequirements, const int numTeams) {
     Solution solution(numRequirements, numTeams);
@@ -70,14 +101,17 @@ bool minCompare(std::pair<int, float> a, std::pair<int, float> b) {
 }
 
 int main() {
-    const int POPULATION_SIZE = 10, NUM_REQUIREMENTS = 6, NUM_TEAMS = 2;
+    const int POPULATION_SIZE = 10,
+              NUM_CUSTOMERS = 5,
+              NUM_REQUIREMENTS = 8,
+              NUM_TEAMS = 3;
 
-    Instance instance;
+    Instance instance = generateRandomInstance(NUM_CUSTOMERS, NUM_REQUIREMENTS, NUM_TEAMS);
 
     // GENERATE RANDOM POPULATION
     std::vector<Solution> solutions;
     for (int i = 0; i < POPULATION_SIZE; i++)
-        solutions.push_back(generateRandomSolution(NUM_REQUIREMENTS, NUM_TEAMS));
+        solutions.push_back(generateRandomSolution(i, NUM_REQUIREMENTS, NUM_TEAMS));
 
     // EVALUATE OBJECTIVE VALUES
     std::vector<std::pair<int, float>> costValues;
@@ -86,6 +120,42 @@ int main() {
         Solution solution = solutions.at(i);
         costValues.push_back(std::make_pair(i, getCostValue(instance, solution)));
         satisfactionValues.push_back(std::make_pair(i, getSatisfactionValue(instance, solution)));
+    }
+
+    // RANK ASSIGNMENT
+    std::vector<int> dominationCount(solutions.size(), 0);
+    std::vector<std::vector<*Solution>> fronts(1, std::vector<*Solution>());
+    for (int i = 0; i < solutions.size(); i++) {
+        for (int j = 0; j < solutions.size(); j++) {
+            if (i == j)
+                continue;
+            bool iDominatesJ = costValues.at(i).second < costValues.at(j).second
+                            && satisfactionValues.at(i).second > satisfactionValues.at(j).second;
+            if (iDominatesJ) {
+                solutions.at(i).dominates.push_back(&solutions.at(j));
+            } else {
+                dominationCount.at(i)++;
+            }
+        }
+        if (dominationCount.at(i) == 0) {
+            solution.rank = 1;
+            fronts.at(0).push_back(&solutions.at(i));
+        }
+    }
+    while(fronts.back().size() != 0) {
+        std::vector<*Solution> nextFront;
+        for (int i = 0; i < fronts.back().size(); i++) {
+            Solution *currentSolution = fronts.at(i);
+            for (int j = 0; j < currentSolution.dominates.size(); j++) {
+                int jIndex = currentSolution.dominates.at(j).id;
+                dominationCount.at(jIndex)--;
+                if (dominationCount.at(jIndex) == 0) {
+                    solutions.at(jIndex).rank++;
+                    nextFront.push_back(&solutions.at(jIndex));
+                }
+            }
+        }
+        fronts.push_back(nextFront);
     }
 
     // CROWDING DISTANCE ASSIGNMENT
