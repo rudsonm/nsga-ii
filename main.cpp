@@ -12,6 +12,8 @@ struct Solution {
     float distance = 0.;
     int rank;    
 
+    Solution() {}
+
     Solution(int solutionId, int numRequirements, int numTeams) {
         id = solutionId;
         requirementTeam = std::vector<int>(numRequirements, 0);
@@ -27,7 +29,6 @@ struct Instance {
     std::vector<float> teamHourCapacity;
     std::vector<float> teamHourCost;    
 };
-
 
 Instance generateRandomInstance(const int &numCustomer, const int &numRequirement, const int &numTeam) {
     Instance instance;
@@ -100,6 +101,25 @@ bool maxCompare(std::pair<int, float> a, std::pair<int, float> b) {
 
 bool minCompare(std::pair<int, float> a, std::pair<int, float> b) {
     return b.second < a.second;
+}
+
+Solution binaryTournamentSelection(const std::vector<Solution> &parents) {
+    int randomIndexA, randomIndexB;
+    do {
+        randomIndexA = rand() % parents.size();
+        randomIndexB = rand() % parents.size();
+    } while (randomIndexA != randomIndexB);
+    
+    Solution parentA = parents.at(randomIndexA),
+             parentB = parents.at(randomIndexB);
+    
+    if (parentA.rank < parentB.rank) {
+        return parentA;
+    } else if (parentA.rank == parentB.rank) {
+        return parentA.distance > parentB.distance ? parentA : parentB;
+    } else {
+        return parentB;
+    }
 }
 
 int main() {
