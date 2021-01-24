@@ -1,18 +1,19 @@
-#include <cstdlib>
+#include <stdlib.h>
 #include <vector>
 #include <algorithm>
 #include <limits>
+#include <tgmath.h>
 
 struct Solution {
     int id = 0;
     std::vector<int> requirementTeam;
     std::vector<int> requirementSequence;
-    std::vector<*Solution> dominates;
+    std::vector<Solution*> dominates;
     float distance = 0.;
     int rank;    
 
-    Solution(int id, int numRequirements, int numTeams) {
-        this.id = id;
+    Solution(int solutionId, int numRequirements, int numTeams) {
+        id = solutionId;
         requirementTeam = std::vector<int>(numRequirements, 0);
         requirementSequence = std::vector<int>(numTeams, 0);
     }
@@ -29,14 +30,14 @@ struct Instance {
 
 
 Instance generateRandomInstance(const int numCustomer, const int numRequirement, const int numTeam) {
-    Instance intance;
+    Instance instance;
     for (int i = 0; i < numCustomer; i++) {
-        customerWeight.push_back(rand() % 3 + 1);
+        instance.customerWeight.push_back(rand() % 3 + 1);
     }
 
-    for (int i = 0; i < instance.teamHourCost; i++) {
-        teamHourCapacity.push_back(rand() % 20 + 20);
-        teamHourCost.push_back(rand() % 15 + 20);
+    for (int i = 0; i < numTeam; i++) {
+        instance.teamHourCapacity.push_back(rand() % 20 + 20);
+        instance.teamHourCost.push_back(rand() % 15 + 20);
     }
 
     for (int i = 0; i < numRequirement; i++) {
@@ -53,8 +54,8 @@ Instance generateRandomInstance(const int numCustomer, const int numRequirement,
     return instance;
 }
 
-Solution generateRandomSolution(const int numRequirements, const int numTeams) {
-    Solution solution(numRequirements, numTeams);
+Solution generateRandomSolution(const int id, const int numRequirements, const int numTeams) {
+    Solution solution(id, numRequirements, numTeams);
 
     for (int &sequence : solution.requirementSequence)
         sequence = std::rand() % (numRequirements + 1);
@@ -124,7 +125,7 @@ int main() {
 
     // RANK ASSIGNMENT
     std::vector<int> dominationCount(solutions.size(), 0);
-    std::vector<std::vector<*Solution>> fronts(1, std::vector<*Solution>());
+    std::vector<std::vector<Solution*>> fronts(1, std::vector<Solution*>());
     for (int i = 0; i < solutions.size(); i++) {
         for (int j = 0; j < solutions.size(); j++) {
             if (i == j)
@@ -138,16 +139,16 @@ int main() {
             }
         }
         if (dominationCount.at(i) == 0) {
-            solution.rank = 1;
+            solutions.at(i).rank = 1;
             fronts.at(0).push_back(&solutions.at(i));
         }
     }
     while(fronts.back().size() != 0) {
-        std::vector<*Solution> nextFront;
+        std::vector<Solution*> nextFront;
         for (int i = 0; i < fronts.back().size(); i++) {
-            Solution *currentSolution = fronts.at(i);
-            for (int j = 0; j < currentSolution.dominates.size(); j++) {
-                int jIndex = currentSolution.dominates.at(j).id;
+            Solution *currentSolution = fronts.back().at(i);
+            for (int j = 0; j < currentSolution->dominates.size(); j++) {
+                int jIndex = currentSolution->dominates.at(j)->id;
                 dominationCount.at(jIndex)--;
                 if (dominationCount.at(jIndex) == 0) {
                     solutions.at(jIndex).rank++;
@@ -168,10 +169,12 @@ int main() {
     std::vector<float> solutionsDistance(solutions.size(), 0.);    
     for (int i = 1; i < solutions.size() - 1; i++) {
         int solutionIndex = costValues.at(i).first;
-        solutions.at(solutionIndex).distance += std::abs(costValues.at(i + 1).second - costValues.at(i - 1).second) / (costValuesMinMax.first - costValuesMinMax.second);
+        float distance = (costValues.at(i + 1).second - costValues.at(i - 1).second) / (costValuesMinMax.first - costValuesMinMax.second);
+        solutions.at(solutionIndex).distance += std::fabs(distance);
 
         solutionIndex = satisfactionValues.at(i).first;
-        solutions.at(solutionIndex).distance += std::abs(satisfactionValues.at(i + 1).second - satisfactionValues.at(i - 1).second) / (satisfactionValuesMinMax.first - satisfactionValuesMinMax.second);
+        distance = (satisfactionValues.at(i + 1).second - satisfactionValues.at(i - 1).second) / (satisfactionValuesMinMax.first - satisfactionValuesMinMax.second);
+        solutions.at(solutionIndex).distance += std::fabs(distance);
     }
     return 0;
 }
