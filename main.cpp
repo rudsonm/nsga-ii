@@ -29,7 +29,7 @@ struct Instance {
 };
 
 
-Instance generateRandomInstance(const int numCustomer, const int numRequirement, const int numTeam) {
+Instance generateRandomInstance(const int &numCustomer, const int &numRequirement, const int &numTeam) {
     Instance instance;
     for (int i = 0; i < numCustomer; i++) {
         instance.customerWeight.push_back(rand() % 3 + 1);
@@ -42,10 +42,11 @@ Instance generateRandomInstance(const int numCustomer, const int numRequirement,
 
     for (int i = 0; i < numRequirement; i++) {
         instance.requirementImportance.push_back(std::vector<float>(numCustomer, 0.));
-        instance.requirementCost.push_back(std::vector<float>(numTeam, 0.));
         for (int j = 0; j < numCustomer; j++) {
             instance.requirementImportance.at(i).at(j) = rand() % 10 + 1;
         }
+        
+        instance.requirementCost.push_back(std::vector<float>(numTeam, 0.));
         for (int j = 0; j < numTeam; j++) {
             instance.requirementCost.at(i).at(j) = (1 - instance.teamHourCost.at(j) / 35) * (rand() % 20 + 1);
         }
@@ -54,7 +55,7 @@ Instance generateRandomInstance(const int numCustomer, const int numRequirement,
     return instance;
 }
 
-Solution generateRandomSolution(const int id, const int numRequirements, const int numTeams) {
+Solution generateRandomSolution(const int &id, const int &numRequirements, const int &numTeams) {
     Solution solution(id, numRequirements, numTeams);
 
     for (int &sequence : solution.requirementSequence)
@@ -68,11 +69,11 @@ Solution generateRandomSolution(const int id, const int numRequirements, const i
 float getCostValue(Instance instance, Solution solution) {
     float costValue = 0.;
     for (int requirement = 0; requirement < solution.requirementTeam.size(); requirement++) {
-        int team = solution.requirementTeam[requirement];
+        int team = solution.requirementTeam[requirement] ;
         if (team == 0)
             continue;
-        float teamCost = instance.teamHourCost.at(team);
-        float requirementCost = instance.requirementCost.at(requirement).at(team);
+        float teamCost = instance.teamHourCost.at(team - 1);
+        float requirementCost = instance.requirementCost.at(requirement).at(team - 1);
         costValue += requirementCost * teamCost;
     }
     return costValue;
@@ -108,12 +109,14 @@ int main() {
               NUM_TEAMS = 3;
 
     Instance instance = generateRandomInstance(NUM_CUSTOMERS, NUM_REQUIREMENTS, NUM_TEAMS);
-
+    
     // GENERATE RANDOM POPULATION
     std::vector<Solution> solutions;
-    for (int i = 0; i < POPULATION_SIZE; i++)
-        solutions.push_back(generateRandomSolution(i, NUM_REQUIREMENTS, NUM_TEAMS));
-
+    for (int i = 0; i < POPULATION_SIZE; i++) {
+        Solution randomSolution = generateRandomSolution(i, NUM_REQUIREMENTS, NUM_TEAMS);
+        solutions.push_back(randomSolution);
+    }
+    
     // EVALUATE OBJECTIVE VALUES
     std::vector<std::pair<int, float>> costValues;
     std::vector<std::pair<int, float>> satisfactionValues;
