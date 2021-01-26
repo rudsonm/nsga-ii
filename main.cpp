@@ -75,6 +75,16 @@ Solution generateRandomSolution(const int &id, const int &numRequirements, const
     return solution;
 }
 
+std::vector<Solution> generateRandomPopulation(const int &numPopulation, const int &numRequirements, const int &numTeams) {
+    std::vector<Solution> solutions;
+
+    for (int i = 0; i < numPopulation; i++) {
+        Solution randomSolution = generateRandomSolution(i, numRequirements, numTeams);
+        solutions.push_back(randomSolution);
+    }
+    return solutions;
+}
+
 void assignCostValue(Instance instance, Solution &solution) {
     float costValue = 0.;
     for (int requirement = 0; requirement < solution.requirementTeam.size(); requirement++) {
@@ -244,30 +254,40 @@ std::vector<float> assignCrowdingDistance(std::vector<Solution> &solutions) {
     }
 }
 
+std::vector<Solution> mergeParentsWithChilds(std::vector<Solution> parents, std::vector<Solution> childs) {
+    std::vector<Solution> population;
+    int id = 0;
+    for (Solution parent : parents) {
+        parent.id = id++;
+        population.push_back(parent);
+    }
+    for (Solution child : childs) {
+        child.id = id++;
+        population.push_back(child);
+    }
+    return population;
+}
+
 int main() {
-    const int POPULATION_SIZE = 10,
+    const int NUM_GENERATIONS = 50,
+              POPULATION_SIZE = 10,
               NUM_CUSTOMERS = 5,
               NUM_REQUIREMENTS = 8,
               NUM_TEAMS = 3;
 
     Instance instance = generateRandomInstance(NUM_CUSTOMERS, NUM_REQUIREMENTS, NUM_TEAMS);
-    
-    // GENERATE RANDOM POPULATION
-    std::vector<Solution> solutions;
-    for (int i = 0; i < POPULATION_SIZE; i++) {
-        Solution randomSolution = generateRandomSolution(i, NUM_REQUIREMENTS, NUM_TEAMS);
-        solutions.push_back(randomSolution);
+    std::vector<Solution> solutions = generateRandomPopulation(POPULATION_SIZE, NUM_REQUIREMENTS, NUM_TEAMS);
+
+    for (int g = 0; g < NUM_GENERATIONS; g++) {
+        evaluateSolutions(instance, solutions);
+
+        getParetoFrontsAndAssignSolutionRank(solutions);
+        assignCrowdingDistance(solutions);
+        
+        std::vector<Solution> selecteds = binaryTournamentSelection(POPULATION_SIZE / 2, solutions);
+        std::vector<Solution> childs = kPointCrossover(POPULATION_SIZE, 4, selecteds, NUM_REQUIREMENTS, NUM_TEAMS);
+
+        solutions = mergeParentsWithChilds(selecteds, childs);
     }
-    
-    // EVALUATE OBJECTIVE VALUES
-    evaluateSolutions(instance, solutions);
-
-    // RANK ASSIGNMENT
-    std::vector<std::vector<Solution*>> fronts = getParetoFrontsAndAssignSolutionRank(solutions);
-
-    // CROWDING DISTANCE ASSIGNMENT
-    assignCrowdingDistance(solutions;
-
-
     return 0;
 }
