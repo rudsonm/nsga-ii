@@ -185,6 +185,7 @@ std::vector<Solution> kPointCrossover(int n, int k, std::vector<Solution> parent
                 children.requirementTeam.push_back(parent.requirementTeam.at(j));
             }
         }
+        childrens.push_back(children);
     } while(childrens.size() < n);
     return childrens;
 }
@@ -279,15 +280,13 @@ int main() {
     std::vector<Solution> solutions = generateRandomPopulation(POPULATION_SIZE, NUM_REQUIREMENTS, NUM_TEAMS);
 
     for (int g = 0; g < NUM_GENERATIONS; g++) {
+        printf("GEN: %i\n", g+1);
         evaluateSolutions(instance, solutions);
-
         getParetoFrontsAndAssignSolutionRank(solutions);
         assignCrowdingDistance(solutions);
-        
-        std::vector<Solution> selecteds = binaryTournamentSelection(POPULATION_SIZE / 2, solutions);
-        std::vector<Solution> childs = kPointCrossover(POPULATION_SIZE, 4, selecteds, NUM_REQUIREMENTS, NUM_TEAMS);
-
-        solutions = mergeParentsWithChilds(selecteds, childs);
+        std::vector<Solution> parents = binaryTournamentSelection(POPULATION_SIZE / 2, solutions);
+        std::vector<Solution> childs = kPointCrossover(POPULATION_SIZE, 4, parents, NUM_REQUIREMENTS, NUM_TEAMS);
+        solutions = mergeParentsWithChilds(parents, childs);
     }
     return 0;
 }
