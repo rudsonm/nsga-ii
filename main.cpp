@@ -8,6 +8,7 @@ struct Solution {
     int id = 0;
     std::vector<int> requirementTeam;
     std::vector<int> requirementSequence;
+    std::vector<float> objectives;
     std::vector<Solution*> dominates;
     float distance = 0.;
     int rank;    
@@ -20,6 +21,13 @@ struct Solution {
         requirementSequence = std::vector<int>(numTeams, 0);
     }
 
+    float getCost() {
+        return objectives.at(0);
+    }
+
+    float getSatisfaction() {
+        return objectives.at(1);
+    }
 };
 
 struct Instance {
@@ -67,7 +75,7 @@ Solution generateRandomSolution(const int &id, const int &numRequirements, const
     return solution;
 }
 
-float getCostValue(Instance instance, Solution solution) {
+void assignCostValue(Instance instance, Solution &solution) {
     float costValue = 0.;
     for (int requirement = 0; requirement < solution.requirementTeam.size(); requirement++) {
         int team = solution.requirementTeam[requirement] ;
@@ -77,10 +85,10 @@ float getCostValue(Instance instance, Solution solution) {
         float requirementCost = instance.requirementCost.at(requirement).at(team - 1);
         costValue += requirementCost * teamCost;
     }
-    return costValue;
+    solution.objectives.push_back(costValue);
 }
 
-float getSatisfactionValue(Instance instance, Solution solution) {
+void assignSatisfactionValue(Instance instance, Solution &solution) {
     float satisfactionValue = 0.;
     for (int requirement = 0; requirement < solution.requirementTeam.size(); requirement++) {
         int team = solution.requirementTeam[requirement];
@@ -92,7 +100,18 @@ float getSatisfactionValue(Instance instance, Solution solution) {
             satisfactionValue += satisfaction * weight;
         }        
     }
-    return satisfactionValue;
+    solution.objectives.push_back(satisfactionValue);
+}
+
+void evaluateSolutions(Instance instance, std::vector<Solution> &solutions) {
+    std::vector<std::pair<int, float>> costValues;
+    std::vector<std::pair<int, float>> satisfactionValues;
+    for (int i = 0; i < solutions.size(); i++) {
+        if (solutions.at(i).objectives.size() > 0)
+            solutions.at(i).objectives.clear();
+        assignCostValue(instance, solutions.at(i));
+        assignSatisfactionValue(instance, solutions.at(i));
+    }
 }
 
 bool maxCompare(std::pair<int, float> a, std::pair<int, float> b) {
@@ -113,7 +132,7 @@ std::vector<Solution> binaryTournamentSelection(int n, std::vector<Solution> par
         } while (randomIndexA != randomIndexB);
         
         Solution parentA = parents.at(randomIndexA),
-                parentB = parents.at(randomIndexB);
+                 parentB = parents.at(randomIndexB);
         
         Solution winner;
         int winnerIndex;
@@ -133,41 +152,42 @@ std::vector<Solution> binaryTournamentSelection(int n, std::vector<Solution> par
     return winners;
 }
 
-std::vector<Solution> generateChildrens(int n, std::vector<Solution> parents)
+std::vector<Solution> kPointCrossover(int n, int k, std::vector<Solution> parents, int numRequirement, int numTeam) {
+    std::vector<Solution> childrens;
+    do {
+        int randomIndexA, randomIndexB;
+        do {
+            randomIndexA = rand() % parents.size();
+            randomIndexB = rand() % parents.size();
+        } while (randomIndexA != randomIndexB);
+        
+        Solution parentA = parents.at(randomIndexA),
+                 parentB = parents.at(randomIndexB);
+        
+        Solution children;
+        int batch = parentA.requirementSequence.size() / k;
+        for (int i = 0; i < batch; i++) {
+            Solution parent = i % 2 == 0 ? parentA : parentB;
+            int start = batch * i,
+                end = i == batch - 1 ? parentA.requirementSequence.size() : start + batch;
+            for (int j = start; j < end; j++) {
+                children.requirementSequence.push_back(parent.requirementSequence.at(j));
+                children.requirementTeam.push_back(parent.requirementTeam.at(j));
+            }
+        }
+    } while(childrens.size() < n);
+    return childrens;
+}
 
-int main() {
-    const int POPULATION_SIZE = 10,
-              NUM_CUSTOMERS = 5,
-              NUM_REQUIREMENTS = 8,
-              NUM_TEAMS = 3;
-
-    Instance instance = generateRandomInstance(NUM_CUSTOMERS, NUM_REQUIREMENTS, NUM_TEAMS);
-    
-    // GENERATE RANDOM POPULATION
-    std::vector<Solution> solutions;
-    for (int i = 0; i < POPULATION_SIZE; i++) {
-        Solution randomSolution = generateRandomSolution(i, NUM_REQUIREMENTS, NUM_TEAMS);
-        solutions.push_back(randomSolution);
-    }
-    
-    // EVALUATE OBJECTIVE VALUES
-    std::vector<std::pair<int, float>> costValues;
-    std::vector<std::pair<int, float>> satisfactionValues;
-    for (int i = 0; i < solutions.size(); i++) {    
-        Solution solution = solutions.at(i);
-        costValues.push_back(std::make_pair(i, getCostValue(instance, solution)));
-        satisfactionValues.push_back(std::make_pair(i, getSatisfactionValue(instance, solution)));
-    }
-
-    // RANK ASSIGNMENT
+std::vector<std::vector<Solution*>> getParetoFrontsAndAssignSolutionRank(std::vector<Solution> &solutions) {
     std::vector<int> dominationCount(solutions.size(), 0);
     std::vector<std::vector<Solution*>> fronts(1, std::vector<Solution*>());
     for (int i = 0; i < solutions.size(); i++) {
         for (int j = 0; j < solutions.size(); j++) {
             if (i == j)
                 continue;
-            bool iDominatesJ = costValues.at(i).second < costValues.at(j).second
-                            && satisfactionValues.at(i).second > satisfactionValues.at(j).second;
+            bool iDominatesJ = solutions.at(i).getCost() < solutions.at(j).getCost()
+                            && solutions.at(i).getSatisfaction() > solutions.at(j).getSatisfaction();
             if (iDominatesJ) {
                 solutions.at(i).dominates.push_back(&solutions.at(j));
             } else {
@@ -194,15 +214,25 @@ int main() {
         }
         fronts.push_back(nextFront);
     }
+    return fronts;
+}
 
-    // CROWDING DISTANCE ASSIGNMENT
+std::vector<float> assignCrowdingDistance(std::vector<Solution> &solutions) {
+    std::vector<std::pair<int, float>> costValues;
+    std::vector<std::pair<int, float>> satisfactionValues;
+    for (int i = 0; i < solutions.size(); i++) {
+        std::pair<int, float> pairValue = std::make_pair(i, solutions.at(i).getCost());
+        costValues.push_back(pairValue);
+        pairValue = std::make_pair(i, solutions.at(i).getSatisfaction());
+        satisfactionValues.push_back(pairValue);
+    }
+
     std::sort(costValues.begin(), costValues.end(), minCompare);
     std::pair<float,float>costValuesMinMax(costValues.front().second, costValues.back().second);
     
     std::sort(satisfactionValues.begin(), satisfactionValues.end(), maxCompare);
     std::pair<float, float>satisfactionValuesMinMax(satisfactionValues.front().second, satisfactionValues.back().second);
-
-    std::vector<float> solutionsDistance(solutions.size(), 0.);    
+    
     for (int i = 1; i < solutions.size() - 1; i++) {
         int solutionIndex = costValues.at(i).first;
         float distance = (costValues.at(i + 1).second - costValues.at(i - 1).second) / (costValuesMinMax.first - costValuesMinMax.second);
@@ -212,5 +242,32 @@ int main() {
         distance = (satisfactionValues.at(i + 1).second - satisfactionValues.at(i - 1).second) / (satisfactionValuesMinMax.first - satisfactionValuesMinMax.second);
         solutions.at(solutionIndex).distance += std::fabs(distance);
     }
+}
+
+int main() {
+    const int POPULATION_SIZE = 10,
+              NUM_CUSTOMERS = 5,
+              NUM_REQUIREMENTS = 8,
+              NUM_TEAMS = 3;
+
+    Instance instance = generateRandomInstance(NUM_CUSTOMERS, NUM_REQUIREMENTS, NUM_TEAMS);
+    
+    // GENERATE RANDOM POPULATION
+    std::vector<Solution> solutions;
+    for (int i = 0; i < POPULATION_SIZE; i++) {
+        Solution randomSolution = generateRandomSolution(i, NUM_REQUIREMENTS, NUM_TEAMS);
+        solutions.push_back(randomSolution);
+    }
+    
+    // EVALUATE OBJECTIVE VALUES
+    evaluateSolutions(instance, solutions);
+
+    // RANK ASSIGNMENT
+    std::vector<std::vector<Solution*>> fronts = getParetoFrontsAndAssignSolutionRank(solutions);
+
+    // CROWDING DISTANCE ASSIGNMENT
+    assignCrowdingDistance(solutions;
+
+
     return 0;
 }
