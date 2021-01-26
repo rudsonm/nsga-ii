@@ -103,24 +103,37 @@ bool minCompare(std::pair<int, float> a, std::pair<int, float> b) {
     return b.second < a.second;
 }
 
-Solution binaryTournamentSelection(const std::vector<Solution> &parents) {
+std::vector<Solution> binaryTournamentSelection(int n, std::vector<Solution> parents) {
+    std::vector<Solution> winners;
     int randomIndexA, randomIndexB;
     do {
-        randomIndexA = rand() % parents.size();
-        randomIndexB = rand() % parents.size();
-    } while (randomIndexA != randomIndexB);
-    
-    Solution parentA = parents.at(randomIndexA),
-             parentB = parents.at(randomIndexB);
-    
-    if (parentA.rank < parentB.rank) {
-        return parentA;
-    } else if (parentA.rank == parentB.rank) {
-        return parentA.distance > parentB.distance ? parentA : parentB;
-    } else {
-        return parentB;
-    }
+        do {
+            randomIndexA = rand() % parents.size();
+            randomIndexB = rand() % parents.size();
+        } while (randomIndexA != randomIndexB);
+        
+        Solution parentA = parents.at(randomIndexA),
+                parentB = parents.at(randomIndexB);
+        
+        Solution winner;
+        int winnerIndex;
+        if (parentA.rank < parentB.rank) {
+            winner = parentA;
+            winnerIndex = randomIndexA;
+        } else if (parentA.rank == parentB.rank) {
+            winner = parentA.distance > parentB.distance ? parentA : parentB;
+            winnerIndex = parentA.distance > parentB.distance ? randomIndexA : randomIndexB;
+        } else {
+            winner = parentB;
+            winnerIndex = randomIndexB;
+        }
+        winners.push_back(winner);
+        parents.erase(parents.begin() + winnerIndex);
+    } while(winners.size() < n && parents.size() > 1);
+    return winners;
 }
+
+std::vector<Solution> generateChildrens(int n, std::vector<Solution> parents)
 
 int main() {
     const int POPULATION_SIZE = 10,
