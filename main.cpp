@@ -227,6 +227,7 @@ std::vector<Solution> kPointCrossover(int n, int k, std::vector<Solution> parent
             }
         }
         childrens.push_back(children1);
+        childrens.push_back(children2);
     } while(childrens.size() < n);
     return childrens;
 }
