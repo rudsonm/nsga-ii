@@ -35,7 +35,44 @@ struct Instance {
     std::vector<std::vector<float>> requirementImportance;
     std::vector<std::vector<float>> requirementCost;
     std::vector<float> teamHourCapacity;
-    std::vector<float> teamHourCost;    
+    std::vector<float> teamHourCost;
+
+    void print() {
+        printf("-------------INSTANCE DETAILS-------------\n");
+
+        printf("CUSTOMERS\n");
+        for(int i = 0; i < customerWeight.size(); i++) {
+            printf("C: %i\tW: %2.f\n", i, customerWeight.at(i));
+        }
+
+        printf("TEAMS\n");
+        for(int i = 0; i < teamHourCapacity.size(); i++) {
+            printf("T: %i\tCap: %2.fh\tCost: $%2.f per hour\n", i, teamHourCapacity.at(i), teamHourCost.at(i));
+        }
+
+        printf("REQUIREMENTS\n");        
+        printf("Cost in hours per team\n");
+        for(int i = 0; i < teamHourCapacity.size(); i++) {
+            printf("\tT%i", i);
+        }
+        for(int i = 0; i < requirementCost.size(); i++) {
+            printf("\nR%i", i);
+            for(int j = 0; j < requirementCost.at(i).size(); j++) {
+                printf("\t%2.fh", requirementCost.at(i).at(j));
+            }
+        }
+        
+        printf("\nImportance per client\n");
+        for(int i = 0; i < customerWeight.size(); i++) {
+            printf("\tC%i", i);
+        }
+        for(int i = 0; i < requirementImportance.size(); i++) {
+            printf("\nR%i", i);
+            for(int j = 0; j < requirementImportance.at(i).size(); j++) {
+                printf("\t%2.f", requirementImportance.at(i).at(j));
+            }
+        }
+    }
 };
 
 Instance generateRandomInstance(const int &numCustomer, const int &numRequirement, const int &numTeam) {
@@ -260,6 +297,7 @@ std::vector<Solution> mergeParentsWithChilds(std::vector<Solution> parents, std:
     int id = 0;
     for (Solution parent : parents) {
         parent.id = id++;
+        parent.distance = 0.;
         population.push_back(parent);
     }
     for (Solution child : childs) {
@@ -287,6 +325,15 @@ int main() {
         std::vector<Solution> parents = binaryTournamentSelection(POPULATION_SIZE / 2, solutions);
         std::vector<Solution> childs = kPointCrossover(POPULATION_SIZE, 4, parents, NUM_REQUIREMENTS, NUM_TEAMS);
         solutions = mergeParentsWithChilds(parents, childs);
+
+        printf("%i\n", solutions.size());
     }
+    
+    for (Solution s : solutions) {
+        printf("%i\n", s.rank);
+    }
+
+    instance.print();
+
     return 0;
 }
