@@ -211,18 +211,22 @@ std::vector<Solution> kPointCrossover(int n, int k, std::vector<Solution> parent
         Solution parentA = parents.at(randomIndexA),
                  parentB = parents.at(randomIndexB);
         
-        Solution children;
+        Solution children1, children2;
         int batch = parentA.requirementSequence.size() / k;
         for (int i = 0; i < batch; i++) {
-            Solution parent = i % 2 == 0 ? parentA : parentB;
+            Solution parent1 = i % 2 == 0 ? parentA : parentB,
+                     parent2 = i % 2 == 0 ? parentB : parentA;
             int start = batch * i,
                 end = i == batch - 1 ? parentA.requirementSequence.size() : start + batch;
             for (int j = start; j < end; j++) {
-                children.requirementSequence.push_back(parent.requirementSequence.at(j));
-                children.requirementTeam.push_back(parent.requirementTeam.at(j));
+                children1.requirementSequence.push_back(parent1.requirementSequence.at(j));
+                children1.requirementTeam.push_back(parent1.requirementTeam.at(j));
+
+                children2.requirementSequence.push_back(parent2.requirementSequence.at(j));
+                children2.requirementTeam.push_back(parent2.requirementTeam.at(j));
             }
         }
-        childrens.push_back(children);
+        childrens.push_back(children1);
     } while(childrens.size() < n);
     return childrens;
 }
@@ -326,7 +330,7 @@ int main() {
         std::vector<Solution> childs = kPointCrossover(POPULATION_SIZE, 4, parents, NUM_REQUIREMENTS, NUM_TEAMS);
         solutions = mergeParentsWithChilds(parents, childs);
 
-        printf("%i\n", solutions.size());
+        printf("%i\n", (int)solutions.size());
     }
     
     for (Solution s : solutions) {
